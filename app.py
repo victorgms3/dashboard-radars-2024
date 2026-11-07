@@ -24,7 +24,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-st.set_page_config(page_title="Excès de vitesse et radars 2024", page_icon="🚗", layout="wide")
+st.set_page_config(page_title="Excès de vitesse et radars 2024", page_icon=":material/speed:", layout="wide")
 
 # ---------------------------------------------------------------------------
 # CONSTANTES
@@ -49,6 +49,20 @@ GRAVITES = ["Mortel", "Grave", "Léger"]  # gravité de la victime la plus touch
 # Gravité = ordre croissant : du bleu clair (léger) au bleu foncé (mortel)
 COULEUR_GRAVITE = {"Léger": "#86b6ef", "Grave": "#2a78d6", "Mortel": "#184f95"}
 COLONNES_COMPTEURS = ["nb_releves", "somme_mesure", "somme_depassement"] + [f"exces_{s}" for s in SEUILS]
+
+# Icônes « Material Symbols » (dessin au trait, comme les menus d'une application métier).
+# Liste complète : https://fonts.google.com/icons ; syntaxe Streamlit : ":material/nom_de_l_icone:"
+ICONES = {
+    "accueil": ":material/home:",
+    "carte": ":material/location_on:",
+    "horaires": ":material/schedule:",
+    "radars": ":material/warning:",
+    "conclusion": ":material/trending_up:",
+    "donnees": ":material/description:",
+    "classement": ":material/format_list_numbered:",
+    "tableau": ":material/table_chart:",
+    "info": ":material/info:",
+}
 
 TOUTES_REGIONS = "Toutes les régions"
 TOUS_DEPARTEMENTS = "Tous les départements"
@@ -214,7 +228,7 @@ def mettre_en_forme(fig, hauteur=380):
 
 
 def message_vide(texte):
-    st.info(f"ℹ️ {texte}")
+    st.info(texte, icon=ICONES["info"])
 
 
 def texte_survol_accidents(acc):
@@ -273,7 +287,7 @@ def distance_de_retour(courbe, taux_loin):
 # ---------------------------------------------------------------------------
 def page_accueil():
     d = charger_donnees()
-    st.title("🚗 Excès de vitesse, radars et accidents en France (2024)")
+    st.title(f"{ICONES['accueil']} Excès de vitesse, radars et accidents en France (2024)")
     st.markdown(
         "Ce tableau de bord permet d'explorer **9,6 millions de vitesses** relevées en 2024 par les "
         "voitures radars banalisées, de les comparer à l'emplacement des **radars fixes** et des "
@@ -296,13 +310,13 @@ def page_accueil():
 
     st.subheader("Comment utiliser ce tableau de bord ?")
     st.markdown(
-        "- **🗺️ Carte des excès** : où les conducteurs dépassent-ils le plus la limite ? "
+        f"- **{ICONES['carte']} Carte des excès** : où les conducteurs dépassent-ils le plus la limite ? "
         "Choisissez une région, une période, un type de route.\n"
-        "- **🕒 Jours et heures** : à quels moments de la semaine roule-t-on trop vite ?\n"
-        "- **📡 Radars et accidents** : les conducteurs ralentissent-ils près des radars fixes ? "
+        f"- **{ICONES['horaires']} Jours et heures** : à quels moments de la semaine roule-t-on trop vite ?\n"
+        f"- **{ICONES['radars']} Radars et accidents** : les conducteurs ralentissent-ils près des radars fixes ? "
         "Y a-t-il moins d'accidents autour ?\n"
-        "- **💡 Conclusion** : ce qu'il faut retenir de l'analyse.\n"
-        "- **📋 Données et méthode** : d'où viennent les chiffres et comment ils ont été nettoyés."
+        f"- **{ICONES['conclusion']} Conclusion** : ce qu'il faut retenir de l'analyse.\n"
+        f"- **{ICONES['donnees']} Données et méthode** : d'où viennent les chiffres et comment ils ont été nettoyés."
     )
 
     st.subheader("Où les voitures radars ont-elles roulé ?")
@@ -327,7 +341,7 @@ def page_accueil():
 # ---------------------------------------------------------------------------
 def page_carte():
     d = charger_donnees()
-    st.title("🗺️ Où roule-t-on trop vite ?")
+    st.title(f"{ICONES['carte']} Où roule-t-on trop vite ?")
     st.caption("Chaque point coloré représente une zone d'environ 2 km sur 2 km. "
                "Plus il est rouge, plus la part de conducteurs au-dessus de la limite est forte.")
 
@@ -445,7 +459,7 @@ def page_carte():
                    "Molette ou pincement pour zoomer, survol pour le détail.")
 
     # --- Classement des zones les plus problématiques
-    st.subheader("🔟 Les 10 zones où l'on dépasse le plus souvent")
+    st.subheader(f"{ICONES['classement']} Les 10 zones où l'on dépasse le plus souvent")
     classement = zones_classement(selection, seuil)
     if classement.empty:
         message_vide(f"Pas assez de mesures pour établir un classement (il faut {MIN_RELEVES_CLASSEMENT} "
@@ -458,7 +472,7 @@ def page_carte():
                     f"À +{seuil} km/h ou plus", format="%.1f %%", min_value=0, max_value=100),
                 "Relevés": st.column_config.NumberColumn(format="localized"),
                 "Vitesse moyenne": st.column_config.NumberColumn(format="%d km/h"),
-                "Voir": st.column_config.LinkColumn("Voir l'endroit", display_text="Ouvrir la carte ↗"),
+                "Voir": st.column_config.LinkColumn("Voir l'endroit", display_text="Ouvrir la carte"),
             },
         )
 
@@ -488,7 +502,7 @@ def page_carte():
         fig.update_yaxes(title=f"% à +{seuil} km/h ou plus", rangemode="tozero")
         st.plotly_chart(mettre_en_forme(fig))
 
-    with st.expander("📄 Voir les chiffres sous forme de tableau"):
+    with st.expander("Voir les chiffres sous forme de tableau", icon=ICONES["tableau"]):
         tableau = par_limite[["route", "nb_releves", "taux_exces", "vitesse_moyenne"]].rename(columns={
             "route": "Vitesse autorisée", "nb_releves": "Relevés",
             "taux_exces": f"% à +{seuil} km/h ou plus", "vitesse_moyenne": "Vitesse moyenne (km/h)"})
@@ -515,7 +529,7 @@ def zones_classement(selection, seuil):
 # ---------------------------------------------------------------------------
 def page_horaires():
     d = charger_donnees()
-    st.title("🕒 Quand roule-t-on trop vite ?")
+    st.title(f"{ICONES['horaires']} Quand roule-t-on trop vite ?")
     st.caption("Part des conducteurs au-dessus de la limite selon le jour de la semaine et l'heure.")
 
     with st.sidebar:
@@ -585,7 +599,7 @@ def page_horaires():
     fig.update_yaxes(title=f"% à +{seuil} km/h ou plus", rangemode="tozero")
     st.plotly_chart(mettre_en_forme(fig))
 
-    with st.expander("📄 Voir les chiffres sous forme de tableau"):
+    with st.expander("Voir les chiffres sous forme de tableau", icon=ICONES["tableau"]):
         tableau = taux.round(1)
         tableau.index = JOURS
         tableau.columns = [f"{h}h" for h in range(24)]
@@ -597,7 +611,7 @@ def page_horaires():
 # ---------------------------------------------------------------------------
 def page_radars():
     d = charger_donnees()
-    st.title("📡 Les radars fixes font-ils ralentir ? Et les accidents ?")
+    st.title(f"{ICONES['radars']} Les radars fixes font-ils ralentir ? Et les accidents ?")
 
     with st.sidebar:
         st.header("Filtres")
@@ -790,7 +804,7 @@ def page_radars():
 def page_conclusion():
     d = charger_donnees()
     carte, horaire, distance, accidents = d["carte"], d["horaire"], d["distance"], d["accidents"]
-    st.title("💡 Conclusion : ce que disent les données")
+    st.title(f"{ICONES['conclusion']} Conclusion : ce que disent les données")
     st.caption("Toutes les valeurs de cette page sont recalculées à partir des données (année 2024, "
                "zones couvertes par les voitures radars).")
 
@@ -942,7 +956,7 @@ def page_conclusion():
 def page_donnees():
     d = charger_donnees()
     r = d["rapport"]
-    st.title("📋 Données et méthode")
+    st.title(f"{ICONES['donnees']} Données et méthode")
 
     st.header("Sources (data.gouv.fr, année 2024)")
     st.markdown(
@@ -1034,12 +1048,12 @@ def page_donnees():
 # NAVIGATION ENTRE LES PAGES
 # ---------------------------------------------------------------------------
 pages = [
-    st.Page(page_accueil, title="Accueil", icon="🏠", url_path="accueil", default=True),
-    st.Page(page_carte, title="Carte des excès", icon="🗺️", url_path="carte"),
-    st.Page(page_horaires, title="Jours et heures", icon="🕒", url_path="horaires"),
-    st.Page(page_radars, title="Radars et accidents", icon="📡", url_path="radars"),
-    st.Page(page_conclusion, title="Conclusion", icon="💡", url_path="conclusion"),
-    st.Page(page_donnees, title="Données et méthode", icon="📋", url_path="donnees"),
+    st.Page(page_accueil, title="Accueil", icon=ICONES["accueil"], url_path="accueil", default=True),
+    st.Page(page_carte, title="Carte des excès", icon=ICONES["carte"], url_path="carte"),
+    st.Page(page_horaires, title="Jours et heures", icon=ICONES["horaires"], url_path="horaires"),
+    st.Page(page_radars, title="Radars et accidents", icon=ICONES["radars"], url_path="radars"),
+    st.Page(page_conclusion, title="Conclusion", icon=ICONES["conclusion"], url_path="conclusion"),
+    st.Page(page_donnees, title="Données et méthode", icon=ICONES["donnees"], url_path="donnees"),
 ]
 page_choisie = st.navigation(pages)
 st.sidebar.caption("Données : data.gouv.fr, année 2024.")
