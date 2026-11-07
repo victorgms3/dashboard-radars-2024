@@ -12,13 +12,15 @@ Pages :
   2. Carte des excès          : où roule-t-on trop vite ? (carte interactive + filtres)
   3. Jours et heures          : quand roule-t-on trop vite ?
   4. Radars et accidents      : effet des radars fixes, accidents près des radars
-  5. Conclusion               : mon analyse (bonus)
-  6. Données et méthode       : sources, nettoyage, limites
+  5. Simulateur               : rouler plus vite, ça rapporte quoi ? (temps, carburant, amende)
+  6. Conclusion               : mon analyse (bonus)
+  7. Données et méthode       : sources, nettoyage, limites
 """
 
 import json
 import os
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -59,6 +61,9 @@ ICONES = {
     "radars": ":material/warning:",
     "conclusion": ":material/trending_up:",
     "donnees": ":material/description:",
+    "simulateur": ":material/timer:",
+    "amende": ":material/gavel:",
+    "calcul": ":material/calculate:",
     "classement": ":material/format_list_numbered:",
     "tableau": ":material/table_chart:",
     "info": ":material/info:",
@@ -315,6 +320,8 @@ def page_accueil():
         f"- **{ICONES['horaires']} Jours et heures** : à quels moments de la semaine roule-t-on trop vite ?\n"
         f"- **{ICONES['radars']} Radars et accidents** : les conducteurs ralentissent-ils près des radars fixes ? "
         "Y a-t-il moins d'accidents autour ?\n"
+        f"- **{ICONES['simulateur']} Simulateur** : rouler plus vite, combien de temps et d'argent "
+        "cela fait-il gagner ou perdre ?\n"
         f"- **{ICONES['conclusion']} Conclusion** : ce qu'il faut retenir de l'analyse.\n"
         f"- **{ICONES['donnees']} Données et méthode** : d'où viennent les chiffres et comment ils ont été nettoyés."
     )
@@ -799,7 +806,233 @@ def page_radars():
 
 
 # ---------------------------------------------------------------------------
-# PAGE 5 : CONCLUSION (bonus)
+# PAGE 5 : SIMULATEUR « ROULER PLUS VITE, ÇA RAPPORTE QUOI ? »
+# ---------------------------------------------------------------------------
+# Modèle de consommation simplifié d'une voiture thermique moyenne (ordres de grandeur).
+# Pour avancer à vitesse constante, le moteur doit vaincre deux forces :
+#   - le frottement des pneus sur la route, à peu près constant ;
+#   - la résistance de l'air, qui augmente avec le CARRÉ de la vitesse.
+# S'y ajoutent les pertes du moteur qui tourne (comme au ralenti) : elles dépendent du temps de trajet.
+GRAVITE_TERRE = 9.81            # m/s²
+MASSE_VOITURE_KG = 1300
+COEF_ROULEMENT = 0.012          # frottement des pneus (sans unité)
+CX_FOIS_SURFACE_M2 = 0.62       # aérodynamisme : coefficient Cx × surface frontale de la voiture
+MASSE_VOLUMIQUE_AIR = 1.2       # kg/m³
+CONSO_RALENTI_L_PAR_H = 0.8     # carburant brûlé par un moteur qui tourne sans avancer
+VITESSE_REFERENCE = 90          # la consommation saisie par l'utilisateur correspond à 90 km/h
+
+ROUTES = {
+    130: "Autoroute (130 km/h)", 110: "Voie rapide (110 km/h)", 90: "Route à 90 km/h",
+    80: "Route départementale (80 km/h)", 70: "Route à 70 km/h", 50: "Traversée de village (50 km/h)",
+}
+
+
+def force_resistance(vitesse_kmh):
+    """Force (en newtons) que le moteur doit vaincre pour rouler à vitesse constante."""
+    v = vitesse_kmh / 3.6  # km/h -> m/s
+    frottement_pneus = COEF_ROULEMENT * MASSE_VOITURE_KG * GRAVITE_TERRE
+    resistance_air = 0.5 * MASSE_VOLUMIQUE_AIR * CX_FOIS_SURFACE_M2 * v ** 2
+    return frottement_pneus + resistance_air
+
+
+def part_ralenti(vitesse_kmh):
+    """Litres aux 100 km dus au seul fait que le moteur tourne (plus on roule vite, moins on passe de temps)."""
+    return 100 * CONSO_RALENTI_L_PAR_H / vitesse_kmh
+
+
+def consommation_l_100km(vitesse_kmh, conso_a_90):
+    """Consommation estimée (L/100 km) à une vitesse donnée, calée sur la consommation de la voiture à 90 km/h.
+
+    On suppose que le carburant brûlé est proportionnel au travail fourni contre les forces
+    (le coefficient est calculé pour retrouver exactement conso_a_90 à 90 km/h).
+    Fonctionne aussi avec un tableau de vitesses (numpy).
+    """
+    coefficient = (conso_a_90 - part_ralenti(VITESSE_REFERENCE)) / force_resistance(VITESSE_REFERENCE)
+    return part_ralenti(vitesse_kmh) + coefficient * force_resistance(vitesse_kmh)
+
+
+def duree(minutes):
+    """8.4 -> '8 min 24 s' ; 75 -> '1 h 15 min'."""
+    secondes = round(abs(minutes) * 60)
+    heures, reste = divmod(secondes, 3600)
+    mins, secs = divmod(reste, 60)
+    if heures:
+        return f"{heures} h {mins:02d} min"
+    if mins:
+        return f"{mins} min {secs:02d} s"
+    return f"{secs} s"
+
+
+def sanction_radar_fixe(vitesse, limite):
+    """Sanction si un radar fixe flashe à cette vitesse (barème en vigueur en 2024, à vérifier sur service-public.fr).
+
+    Une marge technique est d'abord retirée : 5 km/h en dessous de 100 km/h, 5 % à partir de 100 km/h.
+    Renvoie None s'il n'y a pas de sanction.
+    """
+    marge = 5 if vitesse < 100 else vitesse * 0.05
+    vitesse_retenue = int(vitesse - marge)
+    exces = vitesse_retenue - limite
+    if exces <= 0:
+        return {"vitesse_retenue": vitesse_retenue, "exces": exces, "amende": None}
+    if exces < 20:
+        amende, points, suite = (135 if limite <= 50 else 68), (0 if exces < 5 else 1), ""
+    elif exces < 30:
+        amende, points, suite = 135, 2, ""
+    elif exces < 40:
+        amende, points, suite = 135, 3, "suspension du permis possible"
+    elif exces < 50:
+        amende, points, suite = 135, 4, "suspension du permis possible"
+    else:
+        amende, points, suite = "jusqu'à 1 500", 6, "suspension du permis et confiscation du véhicule possibles"
+    return {"vitesse_retenue": vitesse_retenue, "exces": exces, "amende": amende, "points": points, "suite": suite}
+
+
+def graphique_simulation(vitesses, valeurs, vitesse_choisie, valeur_choisie, titre_y, format_survol):
+    """Courbe d'une grandeur (temps ou argent) selon la vitesse, avec la vitesse choisie mise en évidence."""
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=vitesses, y=valeurs, mode="lines", line=dict(color=BLEU, width=2),
+                             hovertemplate="À %{x} km/h : " + format_survol + "<extra></extra>", showlegend=False))
+    fig.add_trace(go.Scatter(x=[vitesse_choisie], y=[valeur_choisie], mode="markers",
+                             marker=dict(size=11, color=BLEU, line=dict(width=2, color="white")),
+                             hovertemplate="Votre choix : " + format_survol + "<extra></extra>", showlegend=False))
+    fig.add_hline(y=0, line=dict(color=GRIS, width=1))
+    fig.update_xaxes(title="Vitesse (km/h)")
+    fig.update_yaxes(title=titre_y)
+    return mettre_en_forme(fig, 320)
+
+
+def page_simulateur():
+    d = charger_donnees()
+    st.title(f"{ICONES['simulateur']} Rouler plus vite, ça rapporte quoi ?")
+    st.caption("Comparez un trajet fait à la vitesse autorisée avec le même trajet à une autre vitesse : "
+               "temps, carburant, argent et risque d'amende.")
+
+    with st.container(border=True):
+        col1, col2, col3 = st.columns(3)
+        limite = col1.selectbox("Type de route", list(ROUTES), format_func=ROUTES.get)
+        distance = col2.number_input("Distance sur ce type de route (km)", min_value=1, max_value=1000,
+                                     value=100, step=5)
+        # La clé dépend de la route : quand on change de route, le curseur repart d'une valeur adaptée
+        vitesse = col3.slider("Ma vitesse (km/h)", min_value=max(30, limite - 40), max_value=limite + 40,
+                              value=limite - 20 if limite >= 110 else limite + 10, step=5,
+                              key=f"vitesse_{limite}")
+        col4, col5 = st.columns(2)
+        conso_90 = col4.number_input(
+            "Consommation de ma voiture à 90 km/h (L/100 km)", min_value=3.0, max_value=15.0, value=5.5, step=0.1,
+            help="Une citadine ou compacte essence consomme environ 5 à 6 L/100 km à 90 km/h.")
+        prix = col5.number_input("Prix du carburant (€/L)", min_value=1.0, max_value=3.0, value=1.80, step=0.01,
+                                 help="Prix indicatif : remplacez-le par le prix affiché à la pompe.")
+
+    if vitesse == limite:
+        message_vide("Choisissez une vitesse différente de la vitesse autorisée pour comparer les deux trajets.")
+        return
+
+    # --- Calculs
+    temps_limite = distance / limite * 60          # minutes
+    temps_choisi = distance / vitesse * 60
+    temps_gagne = temps_limite - temps_choisi       # positif = on arrive plus tôt
+    litres_limite = consommation_l_100km(limite, conso_90) * distance / 100
+    litres_choisi = consommation_l_100km(vitesse, conso_90) * distance / 100
+    litres_en_plus = litres_choisi - litres_limite  # positif = on consomme plus
+    euros_en_plus = litres_en_plus * prix
+    plus_vite = vitesse > limite
+
+    # --- Résultats
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Temps de trajet", duree(temps_choisi), border=True,
+                delta=f"{'-' if temps_gagne > 0 else '+'}{duree(temps_gagne)} vs {limite} km/h",
+                delta_color="inverse")
+    col2.metric("Carburant", f"{fr(litres_choisi, 1)} L", border=True,
+                delta=f"{litres_en_plus:+.1f} L".replace(".", ","), delta_color="inverse")
+    col3.metric("Coût du carburant", f"{fr(litres_choisi * prix, 2)} €", border=True,
+                delta=f"{euros_en_plus:+.2f} €".replace(".", ","), delta_color="inverse")
+    if plus_vite:
+        col4.metric("Prix de chaque minute gagnée", f"{fr(euros_en_plus / temps_gagne, 2)} €", border=True,
+                    help="Carburant payé en plus, divisé par le nombre de minutes gagnées.")
+    else:
+        col4.metric("Économie par minute perdue", f"{fr(euros_en_plus / temps_gagne, 2)} €", border=True,
+                    help="Carburant économisé, divisé par le nombre de minutes perdues.")
+
+    if plus_vite:
+        st.markdown(
+            f"En roulant à **{vitesse} km/h** au lieu de {limite} km/h sur {distance} km, vous arrivez "
+            f"**{duree(temps_gagne)} plus tôt**, mais vous brûlez **{fr(litres_en_plus, 1)} L** de carburant en "
+            f"plus, soit **{fr(euros_en_plus, 2)} €**."
+        )
+        sanction = sanction_radar_fixe(vitesse, limite)
+        if sanction["amende"] is None:
+            st.info(f"Grâce à la marge technique, un radar fixe retiendrait {sanction['vitesse_retenue']} km/h et "
+                    f"ne vous sanctionnerait pas. Vous restez pourtant au-dessus de la limite.", icon=ICONES["info"])
+        else:
+            points = "aucun point retiré" if sanction["points"] == 0 else \
+                f"{sanction['points']} point{'s' if sanction['points'] > 1 else ''} en moins"
+            suite = f", {sanction['suite']}" if sanction["suite"] else ""
+            st.warning(
+                f"**À chaque flash d'un radar fixe** : vitesse retenue {sanction['vitesse_retenue']} km/h "
+                f"(+{sanction['exces']} km/h), amende de **{sanction['amende']} €**, {points}{suite}.",
+                icon=ICONES["amende"])
+    else:
+        st.markdown(
+            f"En roulant à **{vitesse} km/h** au lieu de {limite} km/h sur {distance} km, vous arrivez "
+            f"**{duree(temps_gagne)} plus tard**, mais vous économisez **{fr(-litres_en_plus, 1)} L** de "
+            f"carburant, soit **{fr(-euros_en_plus, 2)} €**."
+        )
+
+    # --- Courbes : ce que change chaque km/h
+    vitesses = np.arange(max(30, limite - 40), limite + 41)
+    gain_minutes = distance / limite * 60 - distance / vitesses * 60
+    surcout = (consommation_l_100km(vitesses, conso_90) - consommation_l_100km(limite, conso_90)) * distance / 100 * prix
+    gauche, droite = st.columns(2)
+    with gauche:
+        st.subheader("Temps gagné ou perdu")
+        st.plotly_chart(graphique_simulation(vitesses, gain_minutes, vitesse, temps_gagne,
+                                             "Minutes gagnées (+) ou perdues (−)", "<b>%{y:.1f} min</b>"))
+    with droite:
+        st.subheader("Carburant en plus ou économisé")
+        st.plotly_chart(graphique_simulation(vitesses, surcout, vitesse, euros_en_plus,
+                                             "Euros en plus (+) ou économisés (−)", "<b>%{y:.2f} €</b>"))
+    st.caption("Le temps gagné augmente de moins en moins vite quand on accélère, alors que le carburant "
+               "consommé augmente de plus en plus vite (la résistance de l'air croît avec le carré de la vitesse).")
+
+    # --- Lien avec les données du dashboard
+    st.subheader(f"Ce que disent les données sur les routes à {limite} km/h")
+    sur_ces_routes = d["carte"][d["carte"]["limite"] == limite]
+    t = totaux(sur_ces_routes, 1)
+    accidents_route = d["accidents"][d["accidents"]["vma"] == limite]
+    part_mortels = pourcentage((accidents_route["gravite"] == "Mortel").sum(), len(accidents_route))
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Vitesse moyenne relevée", f"{fr(t['vitesse_moyenne'])} km/h", border=True,
+                help=f"Moyenne des {fr(t['releves'])} vitesses relevées par les voitures radars sur ces routes.")
+    ecart_km = vitesse - limite
+    seuils_possibles = [s for s in SEUILS if s <= ecart_km]
+    if seuils_possibles:
+        seuil = max(seuils_possibles)
+        col2.metric(f"Conducteurs à +{seuil} km/h ou plus", f"{fr(totaux(sur_ces_routes, seuil)['taux_exces'], 1)} %",
+                    border=True, help="Part des conducteurs relevés qui roulent au moins aussi vite que ce dépassement.")
+    else:
+        col2.metric("Conducteurs au-dessus de la limite", f"{fr(t['taux_exces'], 1)} %", border=True)
+    col3.metric("Accidents mortels sur ces routes", f"{fr(part_mortels, 1)} %", border=True,
+                help=f"Part des {fr(len(accidents_route))} accidents corporels de 2024 sur des routes à {limite} km/h "
+                     "(France métropolitaine) qui ont fait au moins un mort.")
+
+    with st.expander("Comment ce calcul est fait", icon=ICONES["calcul"]):
+        st.markdown(
+            "- **Temps** : durée = distance ÷ vitesse, à vitesse constante (sans bouchons ni arrêts).\n"
+            "- **Carburant** : pour avancer, le moteur lutte contre le frottement des pneus (à peu près "
+            "constant) et contre la résistance de l'air, qui augmente avec le **carré** de la vitesse : rouler "
+            "1,4 fois plus vite double la résistance de l'air. On ajoute ce que consomme un moteur qui tourne "
+            f"({fr(CONSO_RALENTI_L_PAR_H, 1)} L par heure). Le calcul est calé sur la consommation de votre "
+            "voiture à 90 km/h.\n"
+            "- **Voiture type** : 1,3 tonne, aérodynamisme d'une compacte. Les résultats sont des **ordres de "
+            "grandeur**, pas une mesure pour un modèle précis. Ils ne valent pas pour une voiture électrique, "
+            "ni en ville, où les arrêts et redémarrages comptent davantage que la vitesse.\n"
+            "- **Amende** : barème des excès de vitesse en vigueur en 2024 pour un radar fixe (marge technique de "
+            "5 km/h sous 100 km/h, 5 % au-dessus). Il peut évoluer : vérifiez sur service-public.fr."
+        )
+
+
+# ---------------------------------------------------------------------------
+# PAGE 6 : CONCLUSION (bonus)
 # ---------------------------------------------------------------------------
 def page_conclusion():
     d = charger_donnees()
@@ -921,6 +1154,20 @@ def page_conclusion():
         "dépendent aussi des routes que les voitures radars ont parcourues dans chaque région."
     )
 
+    st.header("8. Dépasser la limite fait gagner très peu de temps")
+    depassement = t1["depassement_moyen"]
+    gain_80 = 20 / 80 * 60 - 20 / (80 + depassement) * 60   # minutes gagnées sur 20 km de route à 80
+    perte_autoroute = 100 / 110 * 60 - 100 / 130 * 60          # minutes perdues sur 100 km à 110 au lieu de 130
+    litres_economises = (consommation_l_100km(130, 5.5) - consommation_l_100km(110, 5.5)) * 100 / 100
+    st.markdown(
+        f"Quand ils dépassent, les conducteurs le font en moyenne de **+{fr(depassement, 1)} km/h**. Sur 20 km de "
+        f"route à 80 km/h, rouler à {fr(80 + depassement, 1)} km/h fait gagner **{duree(gain_80)}**. À l'inverse, "
+        f"sur 100 km d'autoroute, rouler à 110 au lieu de 130 km/h ne fait perdre que **{duree(perte_autoroute)}** "
+        f"et économise environ **{fr(litres_economises, 1)} L** de carburant (estimation de la page Simulateur pour "
+        "une voiture qui consomme 5,5 L/100 km à 90 km/h). Le temps gagné est faible, alors que le carburant "
+        "consommé, le risque d'amende et la gravité des accidents augmentent avec la vitesse."
+    )
+
     st.header("Ce que j'en retiens")
     st.success(
         "- Les **radars fixes** ont un effet réel mais **limité à leurs abords** : on y roule moins vite et "
@@ -951,7 +1198,7 @@ def page_conclusion():
 
 
 # ---------------------------------------------------------------------------
-# PAGE 6 : DONNÉES ET MÉTHODE
+# PAGE 7 : DONNÉES ET MÉTHODE
 # ---------------------------------------------------------------------------
 def page_donnees():
     d = charger_donnees()
@@ -1052,6 +1299,7 @@ pages = [
     st.Page(page_carte, title="Carte des excès", icon=ICONES["carte"], url_path="carte"),
     st.Page(page_horaires, title="Jours et heures", icon=ICONES["horaires"], url_path="horaires"),
     st.Page(page_radars, title="Radars et accidents", icon=ICONES["radars"], url_path="radars"),
+    st.Page(page_simulateur, title="Simulateur", icon=ICONES["simulateur"], url_path="simulateur"),
     st.Page(page_conclusion, title="Conclusion", icon=ICONES["conclusion"], url_path="conclusion"),
     st.Page(page_donnees, title="Données et méthode", icon=ICONES["donnees"], url_path="donnees"),
 ]

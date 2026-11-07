@@ -16,16 +16,17 @@ Un tableau de bord Streamlit, utilisable sans connaître Python, qui croise troi
 | Liste des radars fixes en France | 3 268 radars : type, position, date de mise en service, vitesse contrôlée | 0,1 Mo |
 | Accidents corporels (BAAC) : fichiers `caract-2024.csv`, `lieux-2024.csv` et `usagers-2024.csv` | 54 402 accidents (date, heure, position, conditions, type de route) et 125 187 personnes impliquées (gravité) | 28 Mo |
 
-Le dashboard comporte 6 pages, accessibles par le menu à gauche :
+Le dashboard comporte 7 pages, accessibles par le menu à gauche :
 
 | Page | Question posée | Interactions |
 |---|---|---|
-| 🏠 Accueil | De quoi parle-t-on ? | Chiffres clés, zones couvertes |
-| 🗺️ Carte des excès | Où roule-t-on trop vite ? | Région, département, période, moment de la journée, vitesse autorisée, seuil d'excès, affichage des radars et des accidents (par gravité), classement des 10 pires zones |
-| 🕒 Jours et heures | Quand roule-t-on trop vite ? | Carte de chaleur jour × heure, courbe heure par heure |
-| 📡 Radars et accidents | Les radars font-ils ralentir ? Y a-t-il moins d'accidents autour, et sont-ils moins graves ? | Courbe « effet radar », carte des radars, curseur de distance, choix de la gravité des accidents |
-| 💡 Conclusion (bonus) | Que faut-il retenir ? | Analyse rédigée, chiffres recalculés à partir des données |
-| 📋 Données et méthode | D'où viennent les chiffres ? | Sources, étapes de nettoyage, aperçu des tables |
+| Accueil | De quoi parle-t-on ? | Chiffres clés, zones couvertes |
+| Carte des excès | Où roule-t-on trop vite ? | Région, département, période, moment de la journée, vitesse autorisée, seuil d'excès, affichage des radars et des accidents (par gravité), classement des 10 pires zones |
+| Jours et heures | Quand roule-t-on trop vite ? | Carte de chaleur jour × heure, courbe heure par heure |
+| Radars et accidents | Les radars font-ils ralentir ? Y a-t-il moins d'accidents autour, et sont-ils moins graves ? | Courbe « effet radar », carte des radars, curseur de distance, choix de la gravité des accidents |
+| Simulateur | Rouler plus vite, ça rapporte quoi ? | Type de route, distance, vitesse, consommation, prix du carburant : temps gagné ou perdu, carburant, euros, amende encourue, et chiffres réels de ces routes |
+| Conclusion (bonus) | Que faut-il retenir ? | Analyse rédigée, chiffres recalculés à partir des données |
+| Données et méthode | D'où viennent les chiffres ? | Sources, étapes de nettoyage, aperçu des tables |
 
 ---
 
