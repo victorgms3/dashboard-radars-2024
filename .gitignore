@@ -1,0 +1,4 @@
+EXPLICATIONS.md
+__pycache__/
+*.csv
+.venv/
