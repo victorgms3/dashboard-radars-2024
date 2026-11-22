@@ -163,4 +163,4 @@ Les fichiers de `donnees_preparees` sont déjà fournis. Pour les recréer à pa
 
 Le fichier « véhicules immatriculés impliqués dans un accident (BAAC 2024) » a été étudié puis écarté : il ne contient ni position ni date, et ses identifiants d'accident ne correspondent pas à ceux des autres fichiers BAAC.
 
-**Outils utilisés :** Python, pandas, scikit-learn, Plotly, Streamlit, Google Colab, ngrok. **Usage de l'IA :** je me suis fait aider par l'assistant d'IA Claude (Anthropic) pour écrire le code (scripts Python, dashboard, notebook) et rédiger la documentation et le rapport. Le sujet, le choix des données, les questions d'analyse et l'idée du simulateur sont les miens ; j'ai testé, fait corriger et validé chaque version. Utilisation autorisée par l'enseignant pour ce projet.
+**Outils utilisés :** Python, pandas, scikit-learn, Plotly, Streamlit, Google Colab, ngrok. **Usage de l'IA :** Je me suis fait aider par l'IA Claude pour écrire le code et rédiger une partie de la documentation. Utilisation autorisée par l'enseignant pour ce projet.
