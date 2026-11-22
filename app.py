@@ -938,19 +938,20 @@ def page_simulateur():
     plus_vite = vitesse > limite
 
     # --- Résultats
-    col1, col2, col3, col4 = st.columns(4)
+    # Colonne du temps plus large : « 54 min 33 s » est plus long que les autres valeurs
+    col1, col2, col3, col4 = st.columns([1.5, 1, 1, 1])
     col1.metric("Temps de trajet", duree(temps_choisi), border=True,
-                delta=f"{'-' if temps_gagne > 0 else '+'}{duree(temps_gagne)} vs {limite} km/h",
-                delta_color="inverse")
+                delta=f"{'-' if temps_gagne > 0 else '+'}{duree(temps_gagne)}", delta_color="inverse",
+                help=f"Comparé au même trajet à {limite} km/h ({duree(temps_limite)}).")
     col2.metric("Carburant", f"{fr(litres_choisi, 1)} L", border=True,
                 delta=f"{litres_en_plus:+.1f} L".replace(".", ","), delta_color="inverse")
     col3.metric("Coût du carburant", f"{fr(litres_choisi * prix, 2)} €", border=True,
                 delta=f"{euros_en_plus:+.2f} €".replace(".", ","), delta_color="inverse")
     if plus_vite:
-        col4.metric("Prix de chaque minute gagnée", f"{fr(euros_en_plus / temps_gagne, 2)} €", border=True,
+        col4.metric("€ par minute gagnée", f"{fr(euros_en_plus / temps_gagne, 2)} €", border=True,
                     help="Carburant payé en plus, divisé par le nombre de minutes gagnées.")
     else:
-        col4.metric("Économie par minute perdue", f"{fr(euros_en_plus / temps_gagne, 2)} €", border=True,
+        col4.metric("€ par minute perdue", f"{fr(euros_en_plus / temps_gagne, 2)} €", border=True,
                     help="Carburant économisé, divisé par le nombre de minutes perdues.")
 
     if plus_vite:

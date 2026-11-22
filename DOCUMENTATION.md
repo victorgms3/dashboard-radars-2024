@@ -2,7 +2,7 @@
 
 **Projet Python S1, Licence Pro Data Mining 2026-2027**
 **Dashboard : « Excès de vitesse, radars et accidents en France (2024) »**
-Auteur : `<NOM> <Prénom>`
+Auteur : **GOMES SILVA Victor**
 
 ---
 
@@ -32,9 +32,13 @@ Le dashboard comporte 7 pages, accessibles par le menu à gauche :
 
 ## 2. Contenu du dossier livré
 
+Le projet est disponible de deux façons, au contenu identique :
+- **dépôt GitHub public** : <https://github.com/victorgms3/dashboard-radars-2024> ;
+- **archive zip** jointe au mail.
+
 ```
 dashboard_radars/
-├── projet_dashboard_radars.ipynb   ← notebook Google Colab à ouvrir (contient le code de app.py)
+├── projet_dashboard_radars.ipynb   ← notebook Google Colab à ouvrir
 ├── app.py                          ← code du dashboard Streamlit
 ├── preparation_donnees.py          ← nettoyage et agrégation des données brutes (à lancer une seule fois)
 ├── donnees_preparees/              ← fichiers utilisés par le dashboard (≈ 9 Mo au total)
@@ -42,9 +46,10 @@ dashboard_radars/
 │   ├── vitesses_horaires.parquet        vitesses regroupées par département, jour et heure
 │   ├── vitesses_distance_radar.parquet  vitesses regroupées par distance au radar le plus proche
 │   ├── radars_fixes.parquet             radars nettoyés
-│   ├── accidents.parquet                accidents nettoyés
+│   ├── accidents.parquet                accidents nettoyés (avec leur gravité)
 │   └── rapport_nettoyage.json           compte rendu du nettoyage (affiché dans le dashboard)
 ├── requirements.txt                ← bibliothèques nécessaires (exécution en local)
+├── RAPPORT.pdf                     ← rapport du projet
 └── DOCUMENTATION.md                ← ce document
 ```
 
@@ -57,30 +62,29 @@ Les fichiers bruts (535 Mo pour les vitesses) ne sont pas joints : ils sont trop
 ## 3. Exécution sur Google Colab (méthode recommandée)
 
 ### Prérequis
-- un compte Google (pour Colab et Drive) ;
+- un compte Google (pour Colab) ;
 - un compte ngrok gratuit : <https://dashboard.ngrok.com/signup>. Dans le tableau de bord ngrok, noter :
-  - le **jeton** (menu *Your Authtoken*) ;
-  - le **domaine gratuit** (menu *Domains*, de la forme `xxxx.ngrok-free.app`).
+  - le **jeton** (menu *Your Authtoken*, bouton *Copy*) ;
+  - le **domaine gratuit** (menu *Domains*, de la forme `xxxx.ngrok-free.app` ou `xxxx.ngrok-free.dev`).
 
 ### Étapes
-1. Copier le dossier `dashboard_radars` complet à la racine de **Mon Drive** (chemin attendu : `/content/drive/MyDrive/dashboard_radars`). Si vous le placez ailleurs, modifiez la variable `DOSSIER_PROJET` à l'étape 3 du notebook.
-2. Ouvrir `projet_dashboard_radars.ipynb` dans Google Colab (clic droit sur le fichier dans Drive → *Ouvrir avec* → *Google Colaboratory*).
-3. Exécuter les cellules **dans l'ordre** :
+1. Ouvrir <https://colab.research.google.com>, menu *Fichier* → *Importer un notebook*, et choisir `projet_dashboard_radars.ipynb` (onglet *GitHub* : coller `victorgms3/dashboard-radars-2024`, ou onglet *Importer* : le fichier du zip).
+2. Exécuter les cellules **dans l'ordre** :
 
 | Étape du notebook | Ce qu'elle fait | Ce qu'il faut faire |
 |---|---|---|
-| 1. Installer les bibliothèques | `pip install` de streamlit, pyngrok, plotly, pyarrow, scikit-learn | Rien, attendre (≈ 30 s) |
-| 2. Connecter Google Drive | Monte le Drive dans `/content/drive` | Autoriser l'accès dans la fenêtre Google |
-| 3. Récupérer les données préparées | Copie `donnees_preparees` du Drive vers `/content` | Vérifier que la liste des 6 fichiers s'affiche |
-| 4. Écrire l'application | `%%writefile app.py` crée le fichier du dashboard | Rien |
-| 5. Tunnel ngrok | Rend le dashboard accessible par une adresse web | Coller le **jeton**, puis le **domaine** ngrok |
-| 6. Lancer Streamlit | Démarre le serveur et attend qu'il réponde | Attendre « ✅ Streamlit est opérationnel ! », puis ouvrir le lien affiché à l'étape 5 |
+| 1. Récupérer le projet | Télécharge le dépôt GitHub (code + données préparées) et installe les bibliothèques | Rien, attendre (≈ 30 s) |
+| 2. Tunnel ngrok | Rend le dashboard accessible par une adresse web | Coller le **jeton**, puis le **domaine** ngrok (sans `https://`) |
+| 3. Lancer Streamlit | Démarre le serveur et attend qu'il réponde | Attendre « ✅ Streamlit est opérationnel ! », puis ouvrir le lien affiché à l'étape 2 |
 
-4. À la première ouverture du lien, ngrok affiche une page d'avertissement : cliquer sur **Visit Site**.
-5. Le premier affichage prend quelques secondes (chargement des données en mémoire) ; ensuite chaque clic est quasi instantané.
+3. À la première ouverture du lien, ngrok affiche une page d'avertissement : cliquer sur **Visit Site**.
+4. Le premier affichage prend quelques secondes (chargement des données en mémoire) ; ensuite chaque clic est quasi instantané.
+
+### Solution de secours : sans GitHub, avec Google Drive
+Si GitHub n'est pas accessible : décompresser le zip, déposer le dossier `dashboard_radars` à la racine de **Mon Drive**, puis dans l'étape 1 du notebook mettre `SOURCE = "drive"`. Le notebook connecte alors le Drive (autoriser l'accès) et copie le dossier dans Colab au lieu de le télécharger.
 
 ### Arrêter ou relancer
-Exécuter la dernière cellule (`process.terminate()` et `ngrok.kill()`), puis relancer les étapes 5 et 6. Après une modification du code, relancer les étapes 4, puis 5 et 6. Après avoir refait la préparation des données, il faut aussi arrêter puis relancer Streamlit : il garde les anciennes données en mémoire (cache) tant qu'il tourne.
+Exécuter la dernière cellule (`process.terminate()` et `ngrok.kill()`), puis relancer les étapes 2 et 3. Le lien ne fonctionne que tant que la session Colab est ouverte. Après avoir refait la préparation des données, il faut aussi arrêter puis relancer Streamlit : il garde les anciennes données en mémoire (cache) tant qu'il tourne.
 
 ---
 
@@ -110,7 +114,7 @@ Les fichiers de `donnees_preparees` sont déjà fournis. Pour les recréer à pa
    - `usagers-2024.csv`
 2. Lancer le script en lui donnant le dossier où se trouvent ces fichiers :
    - **en local** : `python preparation_donnees.py chemin/vers/les/csv` (sans argument, le script cherche les CSV dans le dossier parent de `dashboard_radars`) ;
-   - **sur Colab** : déposer les CSV dans `Mon Drive/dashboard_radars/donnees_brutes`, puis mettre `REFAIRE_PREPARATION = True` à l'étape 3 du notebook.
+   - **sur Colab** : déposer les CSV dans `Mon Drive/donnees_brutes_radars`, puis mettre `REFAIRE_PREPARATION = True` à l'étape 1 du notebook (le Drive est alors connecté automatiquement).
 3. Durée : environ 1 à 2 minutes. Le script affiche chaque étape puis le rapport de nettoyage, et réécrit le dossier `donnees_preparees`.
 
 ### Ce que fait le script
@@ -139,13 +143,13 @@ Les fichiers de `donnees_preparees` sont déjà fournis. Pour les recréer à pa
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
-| `FileNotFoundError ... donnees_preparees` | Le dossier n'a pas été copié dans `/content` | Vérifier `DOSSIER_PROJET` à l'étape 3 et relancer l'étape 3 |
-| « ❌ Streamlit ne répond pas » | Erreur dans `app.py` ou démarrage lent | Relancer l'étape 6 ; sinon lancer `!streamlit run app.py` dans une cellule pour lire l'erreur |
+| `FileNotFoundError ... donnees_preparees` | Le notebook n'est pas dans le dossier du projet | Relancer l'étape 1 (elle se place dans le dossier avec `%cd`) |
+| « ❌ Streamlit ne répond pas » | Erreur dans `app.py` ou démarrage lent | Relancer l'étape 3 ; sinon lancer `!streamlit run app.py` dans une cellule pour lire l'erreur |
 | ngrok : `ERR_NGROK_4018` ou jeton refusé | Jeton mal copié | Recopier le jeton depuis le tableau de bord ngrok |
 | ngrok : domaine refusé | Domaine mal saisi ou déjà utilisé par une autre session | Saisir le domaine sans `https://` ; arrêter les autres sessions (`ngrok.kill()`) |
 | La carte est vide pour une région | Les voitures radars n'ont pas circulé dans cette région en 2024 | Normal : seules 8 régions sont couvertes (voir la page Accueil) |
 | `ModuleNotFoundError` | Étape 1 non exécutée | Relancer l'étape 1 |
-| `KeyError` sur une colonne (ex. `'gravite'`) après avoir refait la préparation | Streamlit utilise encore les anciennes données gardées en mémoire | Arrêter Streamlit (dernière cellule) puis relancer les étapes 5 et 6 |
+| `KeyError` sur une colonne (ex. `'gravite'`) après avoir refait la préparation | Streamlit utilise encore les anciennes données gardées en mémoire | Arrêter Streamlit (dernière cellule) puis relancer les étapes 2 et 3 |
 
 ---
 
@@ -157,4 +161,4 @@ Les fichiers de `donnees_preparees` sont déjà fournis. Pour les recréer à pa
 
 Le fichier « véhicules immatriculés impliqués dans un accident (BAAC 2024) » a été étudié puis écarté : il ne contient ni position ni date, et ses identifiants d'accident ne correspondent pas à ceux des autres fichiers BAAC.
 
-**Outils utilisés :** Python, pandas, scikit-learn, Plotly, Streamlit, Google Colab, ngrok. Code réalisé avec l'aide d'un assistant d'IA (Claude), utilisation autorisée pour ce projet.
+**Outils utilisés :** Python, pandas, scikit-learn, Plotly, Streamlit, Google Colab, ngrok. **Usage de l'IA :** le code (scripts Python, dashboard, notebook) a été généré avec l'assistant d'IA Claude (Anthropic), à partir de mes choix de sujet, de données et d'analyse ; j'ai vérifié, testé et relu l'ensemble. Utilisation autorisée par l'enseignant pour ce projet.
