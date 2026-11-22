@@ -32,12 +32,12 @@ Le dashboard comporte 7 pages, accessibles par le menu à gauche :
 
 ## 2. Contenu du dossier livré
 
-Le projet est disponible de deux façons, au contenu identique :
+Le projet s'appelle partout **`dashboard-radars-2024`**. Il est disponible de deux façons, au contenu identique :
 - **dépôt GitHub public** : <https://github.com/victorgms3/dashboard-radars-2024> ;
-- **archive zip** jointe au mail.
+- **archive zip** jointe au mail (`dashboard-radars-2024_GOMES_SILVA_Victor.zip`), qui contient un seul dossier `dashboard-radars-2024/`.
 
 ```
-dashboard_radars/
+dashboard-radars-2024/
 ├── projet_dashboard_radars.ipynb   ← notebook Google Colab à ouvrir
 ├── app.py                          ← code du dashboard Streamlit
 ├── preparation_donnees.py          ← nettoyage et agrégation des données brutes (à lancer une seule fois)
@@ -68,20 +68,22 @@ Les fichiers bruts (535 Mo pour les vitesses) ne sont pas joints : ils sont trop
   - le **domaine gratuit** (menu *Domains*, de la forme `xxxx.ngrok-free.app` ou `xxxx.ngrok-free.dev`).
 
 ### Étapes
-1. Ouvrir <https://colab.research.google.com>, menu *Fichier* → *Importer un notebook*, et choisir `projet_dashboard_radars.ipynb` (onglet *GitHub* : coller `victorgms3/dashboard-radars-2024`, ou onglet *Importer* : le fichier du zip).
+1. Ouvrir <https://colab.research.google.com>, menu *Fichier* → *Importer un notebook*, et choisir `projet_dashboard_radars.ipynb` (onglet *GitHub* : coller `victorgms3/dashboard-radars-2024`, ou onglet *Importer* : le notebook sorti du zip).
 2. Exécuter les cellules **dans l'ordre** :
 
 | Étape du notebook | Ce qu'elle fait | Ce qu'il faut faire |
 |---|---|---|
-| 1. Récupérer le projet | Télécharge le dépôt GitHub (code + données préparées) et installe les bibliothèques | Rien, attendre (≈ 30 s) |
+| 1. Récupérer le projet | Télécharge le dépôt GitHub (code + données préparées) dans `/content/dashboard-radars-2024` et installe les bibliothèques | Rien, attendre (≈ 30 s) |
 | 2. Tunnel ngrok | Rend le dashboard accessible par une adresse web | Coller le **jeton**, puis le **domaine** ngrok (sans `https://`) |
 | 3. Lancer Streamlit | Démarre le serveur et attend qu'il réponde | Attendre « ✅ Streamlit est opérationnel ! », puis ouvrir le lien affiché à l'étape 2 |
 
 3. À la première ouverture du lien, ngrok affiche une page d'avertissement : cliquer sur **Visit Site**.
 4. Le premier affichage prend quelques secondes (chargement des données en mémoire) ; ensuite chaque clic est quasi instantané.
 
-### Solution de secours : sans GitHub, avec Google Drive
-Si GitHub n'est pas accessible : décompresser le zip, déposer le dossier `dashboard_radars` à la racine de **Mon Drive**, puis dans l'étape 1 du notebook mettre `SOURCE = "drive"`. Le notebook connecte alors le Drive (autoriser l'accès) et copie le dossier dans Colab au lieu de le télécharger.
+### Solutions de secours, sans GitHub
+Dans l'étape 1 du notebook, changer la valeur de `SOURCE` :
+- **`SOURCE = "zip"`** (avec le zip seul) : à l'exécution, un bouton *Choisir des fichiers* apparaît ; sélectionner le zip reçu par mail. Le notebook le décompresse dans `/content/dashboard-radars-2024`.
+- **`SOURCE = "drive"`** : décompresser le zip, déposer le dossier `dashboard-radars-2024` à la racine de **Mon Drive**, puis exécuter l'étape 1 (autoriser l'accès au Drive). Le dossier est copié dans `/content/dashboard-radars-2024`.
 
 ### Arrêter ou relancer
 Exécuter la dernière cellule (`process.terminate()` et `ngrok.kill()`), puis relancer les étapes 2 et 3. Le lien ne fonctionne que tant que la session Colab est ouverte. Après avoir refait la préparation des données, il faut aussi arrêter puis relancer Streamlit : il garde les anciennes données en mémoire (cache) tant qu'il tourne.
@@ -93,7 +95,7 @@ Exécuter la dernière cellule (`process.terminate()` et `ngrok.kill()`), puis r
 Avec Python 3.10 ou plus récent :
 
 ```bash
-cd dashboard_radars
+cd dashboard-radars-2024
 pip install -r requirements.txt
 streamlit run app.py
 ```
@@ -113,7 +115,7 @@ Les fichiers de `donnees_preparees` sont déjà fournis. Pour les recréer à pa
    - `lieux-2024.csv`
    - `usagers-2024.csv`
 2. Lancer le script en lui donnant le dossier où se trouvent ces fichiers :
-   - **en local** : `python preparation_donnees.py chemin/vers/les/csv` (sans argument, le script cherche les CSV dans le dossier parent de `dashboard_radars`) ;
+   - **en local** : `python preparation_donnees.py chemin/vers/les/csv` (sans argument, le script cherche les CSV dans le dossier parent de `dashboard-radars-2024`) ;
    - **sur Colab** : déposer les CSV dans `Mon Drive/donnees_brutes_radars`, puis mettre `REFAIRE_PREPARATION = True` à l'étape 1 du notebook (le Drive est alors connecté automatiquement).
 3. Durée : environ 1 à 2 minutes. Le script affiche chaque étape puis le rapport de nettoyage, et réécrit le dossier `donnees_preparees`.
 
@@ -161,4 +163,4 @@ Les fichiers de `donnees_preparees` sont déjà fournis. Pour les recréer à pa
 
 Le fichier « véhicules immatriculés impliqués dans un accident (BAAC 2024) » a été étudié puis écarté : il ne contient ni position ni date, et ses identifiants d'accident ne correspondent pas à ceux des autres fichiers BAAC.
 
-**Outils utilisés :** Python, pandas, scikit-learn, Plotly, Streamlit, Google Colab, ngrok. **Usage de l'IA :** le code (scripts Python, dashboard, notebook) a été généré avec l'assistant d'IA Claude (Anthropic), à partir de mes choix de sujet, de données et d'analyse ; j'ai vérifié, testé et relu l'ensemble. Utilisation autorisée par l'enseignant pour ce projet.
+**Outils utilisés :** Python, pandas, scikit-learn, Plotly, Streamlit, Google Colab, ngrok. **Usage de l'IA :** je me suis fait aider par l'assistant d'IA Claude (Anthropic) pour écrire le code (scripts Python, dashboard, notebook) et rédiger la documentation et le rapport. Le sujet, le choix des données, les questions d'analyse et l'idée du simulateur sont les miens ; j'ai testé, fait corriger et validé chaque version. Utilisation autorisée par l'enseignant pour ce projet.

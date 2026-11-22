@@ -864,7 +864,10 @@ def duree(minutes):
 
 
 def sanction_radar_fixe(vitesse, limite):
-    """Sanction si un radar fixe flashe à cette vitesse (barème en vigueur en 2024, à vérifier sur service-public.fr).
+    """Sanction si un radar fixe flashe à cette vitesse.
+
+    Barème : service-public.gouv.fr, fiches « Vitesse au volant » (F19460, vérifiée le 29/12/2025)
+    et « Barème des points retirés par infraction » (F31551).
 
     Une marge technique est d'abord retirée : 5 km/h en dessous de 100 km/h, 5 % à partir de 100 km/h.
     Renvoie None s'il n'y a pas de sanction.
@@ -883,7 +886,9 @@ def sanction_radar_fixe(vitesse, limite):
     elif exces < 50:
         amende, points, suite = 135, 4, "suspension du permis possible"
     else:
-        amende, points, suite = "jusqu'à 1 500", 6, "suspension du permis et confiscation du véhicule possibles"
+        # À partir de +50 km/h, ce n'est plus une contravention mais un délit (jugé par un tribunal)
+        amende, points, suite = "jusqu'à 3 750", 6, ("délit : jusqu'à 3 mois de prison, suspension du permis "
+                                                       "et confiscation du véhicule possibles")
     return {"vitesse_retenue": vitesse_retenue, "exces": exces, "amende": amende, "points": points, "suite": suite}
 
 
@@ -1027,8 +1032,9 @@ def page_simulateur():
             "- **Voiture type** : 1,3 tonne, aérodynamisme d'une compacte. Les résultats sont des **ordres de "
             "grandeur**, pas une mesure pour un modèle précis. Ils ne valent pas pour une voiture électrique, "
             "ni en ville, où les arrêts et redémarrages comptent davantage que la vitesse.\n"
-            "- **Amende** : barème des excès de vitesse en vigueur en 2024 pour un radar fixe (marge technique de "
-            "5 km/h sous 100 km/h, 5 % au-dessus). Il peut évoluer : vérifiez sur service-public.fr."
+            "- **Amende** : barème officiel des excès de vitesse (service-public.gouv.fr, fiche « Vitesse au "
+            "volant », vérifiée le 29/12/2025), appliqué après la marge technique d'un radar fixe (5 km/h sous "
+            "100 km/h, 5 % au-dessus). Le barème peut évoluer : vérifiez sur service-public.gouv.fr."
         )
 
 
